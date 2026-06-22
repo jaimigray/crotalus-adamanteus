@@ -340,7 +340,24 @@ function applyMat(key, visible, opacity) {
     if (m) { s.mat = m; m.setAlphaMode('BLEND'); const f = m.pbrMetallicRoughness.baseColorFactor; s.rgb = [f[0],f[1],f[2]]; }
   }
   if (!s.mat) return;
-  s.mat.pbrMetallicRoughness.setBaseColorFactor([...s.rgb, visible ? opacity : 0]);
+  const effectiveOpacity = visible ? opacity : 0;
+  s.mat.pbrMetallicRoughness.setBaseColorFactor([...s.rgb, effectiveOpacity]);
+
+  // When snake is fully opaque, re-enable depthWrite so it self-sorts correctly.
+  // When translucent, disable it so the rodent inside shows through.
+  if (key === 'snake') {
+    const scene = getThreeScene();
+    if (scene) {
+      scene.traverse(obj => {
+        if (!obj.isMesh) return;
+        const m = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+        if (!m || m.name !== 'snake') return;
+        m.depthWrite = effectiveOpacity >= 1;
+        m.needsUpdate = true;
+      });
+      nudgeRender();
+    }
+  }
 }
 
 function wireSlider(key, visId, sliderId, valId) {
