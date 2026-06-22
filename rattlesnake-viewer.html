@@ -310,6 +310,27 @@ mv.addEventListener('load', () => {
     if (m.name === 'snake')  { matState.snake.mat  = m; m.setAlphaMode('BLEND'); const f = m.pbrMetallicRoughness.baseColorFactor; matState.snake.rgb  = [f[0],f[1],f[2]]; }
     if (m.name === 'rodent') { matState.rodent.mat = m; m.setAlphaMode('BLEND'); const f = m.pbrMetallicRoughness.baseColorFactor; matState.rodent.rgb = [f[0],f[1],f[2]]; }
   });
+
+  // Fix depth sorting: snake renders after rodent and never writes to depth buffer,
+  // so the rodent always appears correctly inside the snake.
+  const scene = getThreeScene();
+  if (scene) {
+    scene.traverse(obj => {
+      if (!obj.isMesh) return;
+      const m = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+      if (!m) return;
+      if (m.name === 'snake') {
+        obj.renderOrder = 1;
+        m.depthWrite = false;
+        m.needsUpdate = true;
+      } else if (m.name === 'rodent') {
+        obj.renderOrder = 0;
+        m.depthWrite = true;
+        m.needsUpdate = true;
+      }
+    });
+    nudgeRender();
+  }
 });
 
 function applyMat(key, visible, opacity) {
